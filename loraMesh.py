@@ -10,12 +10,12 @@ import simpy
 import numpy as np
 
 from lib.common import setup_asymmetric_links
-from lib.config import CONFIG
+from lib.config import Config, CONFIG
 from lib.discrete_event import BroadcastPipe
 from lib.gui import Graph, plot_schedule, gen_scenario, run_graph_updates
 from lib.node import MeshNode, generate_node_list
 
-conf = CONFIG
+conf = Config('MANAGED_FLOOD')
 random.seed(conf.SEED)
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO) # default log level

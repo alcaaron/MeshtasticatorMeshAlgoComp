@@ -1,11 +1,14 @@
 from enum import Enum
-
 class Config:
 
     class ROUTER_TYPE(Enum):
         MANAGED_FLOOD = 'MANAGED_FLOOD'
+        GOSSIP = 'GOSSIP'
+        COUNTER_BASED = 'COUNTER_BASED'
+        RSSI_BASED = 'RSSI_BASED'
+        FLOODING_WITH_MEMORY = 'FLOODING_WITH_MEMORY'
 
-    def __init__(self):
+    def __init__(self, router_type=ROUTER_TYPE.MANAGED_FLOOD):
         self.MODEL = 5  # Path loss model to use (see README)
 
         self.XSIZE = 15000  # horizontal size of the area to simulate in m
@@ -299,7 +302,7 @@ class Config:
                 "wide_lora": True
             },
         }
-        self.REGION = self.regions["US"]  # Select a different region here
+        self.REGION = self.regions["EU_868"]  # Select a different region here
         self.CHANNEL_NUM = 27  # Channel number
 
         self.PLOT = True # whether to plot the time schedule of packets after the simulation
@@ -409,7 +412,17 @@ class Config:
         ############################
         # This can also be overwritten by scenarios defined in batchSim.py
         # or by passing this as the second command line param to loraMesh.py
-        self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.MANAGED_FLOOD
+        match router_type:
+            case self.ROUTER_TYPE.MANAGED_FLOOD.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.MANAGED_FLOOD
+            case self.ROUTER_TYPE.GOSSIP.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.GOSSIP
+            case self.ROUTER_TYPE.COUNTER_BASED.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.COUNTER_BASED
+            case self.ROUTER_TYPE.RSSI_BASED.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.RSSI_BASED
+            case self.ROUTER_TYPE.FLOODING_WITH_MEMORY.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.FLOODING_WITH_MEMORY
 
         #####################################################
         ####### ASYMMETRIC LINK SIMULATION VARIABLES ########

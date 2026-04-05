@@ -384,6 +384,12 @@ class MeshNode:
                 logger.debug(f"{self.env.now:.3f} Node {self.nodeid} in the meantime received ACK, abort packet with seq. nr {packet.seq}")
                 self.packets.remove(packet)
 
+    def do_rebroadcast(self, packet):
+        pNew = MeshPacket(self.conf, self.nodes, packet.origTxNodeId, packet.destId, self.nodeid, packet.packetLen, packet.seq, packet.genTime, packet.wantAck, False, None, self.env.now)
+        pNew.hopLimit = packet.hopLimit - 1
+        self.packets.append(pNew)
+        self.env.process(self.transmit(pNew))
+
     def receive(self, in_pipe):
         while True:
             p = yield in_pipe.get()
@@ -444,15 +450,47 @@ class MeshNode:
                     pAck = MeshPacket(self.conf, self.nodes, self.nodeid, p.origTxNodeId, self.nodeid, self.conf.ACKLENGTH, messageSeq, self.env.now, False, True, p.seq, self.env.now)
                     self.packets.append(pAck)
                     self.env.process(self.transmit(pAck))
+
                 # Rebroadcasting Logic for received message. This is a broadcast or a DM not meant for us.
                 elif not p.destId == self.nodeid and not ackReceived and not realAckReceived and p.hopLimit > 0:
                     # FloodingRouter: rebroadcast received packet
                     if self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.MANAGED_FLOOD:
                         if not self.is_client_mute:
-                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} rebroadcasts received packet {p.seq}")
-                            pNew = MeshPacket(self.conf, self.nodes, p.origTxNodeId, p.destId, self.nodeid, p.packetLen, p.seq, p.genTime, p.wantAck, False, None, self.env.now)
-                            pNew.hopLimit = p.hopLimit - 1
-                            self.packets.append(pNew)
-                            self.env.process(self.transmit(pNew))
+                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} MANAGED FLOODING rebroadcasts received packet {p.seq}")
+                            self.do_rebroadcast(p)
+
+
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.GOSSIP:
+                        # rebroadcast with a certain probability
+                        p_prob = 0.6
+                        if not self.is_client_mute and random.random() < p_prob:
+                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} GOSSIP rebroadcast {p.seq}")
+                            self.do_rebroadcast(p)
+
+
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.COUNTER_BASED:
+                        # rebroadcast if you received less than C copies of this message so far (including the original transmission, if you are a router/repeater)
+                        C : int = 2
+
+                        if not self.is_client_mute and self.timesReceived < C:
+                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} COUNTER rebroadcast {p.seq} (count={self.timesReceived})")
+                            self.do_rebroadcast(p)
+
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.RSSI_BASED:
+                        # rebroadcast if the signal strength of the received message is below a certain threshold (i.e., you are far away from the sender, so it needs more help to reach the destination)
+                        rssi_threshold = -90
+
+                        rssi = p.rssiAtN[self.nodeid]
+
+                        if not self.is_client_mute and rssi < rssi_threshold:
+                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} RSSI rebroadcast {p.seq} (rssi={rssi})")
+                            self.do_rebroadcast(p)
+
+
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.FLOODING_WITH_MEMORY:
+                        # rebroadcast if you have not already received this message more than 2 times (including the original transmission, if you are a router/repeater). This is similar to Counter-Based, but with a higher threshold and applied to clients as well, since they can also help with rebroadcasting.
+                        if not self.is_client_mute and self.timesReceived == 1:
+                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} MEMORY rebroadcast {p.seq}")
+                            self.do_rebroadcast(p)
                 else:
                     self.droppedByDelay += 1
