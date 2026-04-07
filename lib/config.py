@@ -3,10 +3,15 @@ class Config:
 
     class ROUTER_TYPE(Enum):
         MANAGED_FLOOD = 'MANAGED_FLOOD'
-        GOSSIP = 'GOSSIP'
+        GOSSIP02 = 'GOSSIP02'
+        GOSSIP04 = 'GOSSIP04'
+        GOSSIP06 = 'GOSSIP06'
+        GOSSIP08 = 'GOSSIP08'
         COUNTER_BASED = 'COUNTER_BASED'
         RSSI_BASED = 'RSSI_BASED'
         FLOODING_WITH_MEMORY = 'FLOODING_WITH_MEMORY'
+        MANAGED_GOSSIP = 'MANAGED_GOSSIP'
+        ADAPTIVE_GOSSIP = 'ADAPTIVE_GOSSIP'
 
     def __init__(self, router_type=ROUTER_TYPE.MANAGED_FLOOD):
         self.MODEL = 5  # Path loss model to use (see README)
@@ -415,14 +420,24 @@ class Config:
         match router_type:
             case self.ROUTER_TYPE.MANAGED_FLOOD.value:
                 self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.MANAGED_FLOOD
-            case self.ROUTER_TYPE.GOSSIP.value:
-                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.GOSSIP
+            case self.ROUTER_TYPE.GOSSIP02.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.GOSSIP02
+            case self.ROUTER_TYPE.GOSSIP04.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.GOSSIP04
+            case self.ROUTER_TYPE.GOSSIP06.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.GOSSIP06
+            case self.ROUTER_TYPE.GOSSIP08.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.GOSSIP08
             case self.ROUTER_TYPE.COUNTER_BASED.value:
                 self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.COUNTER_BASED
             case self.ROUTER_TYPE.RSSI_BASED.value:
                 self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.RSSI_BASED
             case self.ROUTER_TYPE.FLOODING_WITH_MEMORY.value:
                 self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.FLOODING_WITH_MEMORY
+            case self.ROUTER_TYPE.MANAGED_GOSSIP.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.MANAGED_GOSSIP
+            case self.ROUTER_TYPE.ADAPTIVE_GOSSIP.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.ADAPTIVE_GOSSIP
 
         #####################################################
         ####### ASYMMETRIC LINK SIMULATION VARIABLES ########
@@ -471,4 +486,4 @@ class Config:
         return
 
 # single module-level config for all users to reference unambiguously
-CONFIG = Config()
+CONFIG = Config('ADAPTIVE_GOSSIP')

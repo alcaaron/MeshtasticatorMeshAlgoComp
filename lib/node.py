@@ -130,6 +130,7 @@ class MeshNode:
         self.moveRng = random.Random(self.nodeid)
         self.nodeRng = random.Random(self.nodeid)
         self.rebroadcastRng = random.Random()
+        self.neighbors = set()
 
         # require the user to specify a node configuration now, including position
         self.position = nodeConfig.position.copy() # make sure we have our own point
@@ -460,20 +461,73 @@ class MeshNode:
                             self.do_rebroadcast(p)
 
 
-                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.GOSSIP:
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.GOSSIP02:
+                        # rebroadcast with a certain probability
+                        p_prob = 0.2
+                        if not self.is_client_mute and random.random() < p_prob:
+                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} GOSSIP rebroadcast {p.seq}")
+                            self.do_rebroadcast(p)
+
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.GOSSIP04:
+                        # rebroadcast with a certain probability
+                        p_prob = 0.4
+                        if not self.is_client_mute and random.random() < p_prob:
+                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} GOSSIP rebroadcast {p.seq}")
+                            self.do_rebroadcast(p)
+
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.GOSSIP06:
                         # rebroadcast with a certain probability
                         p_prob = 0.6
                         if not self.is_client_mute and random.random() < p_prob:
                             logger.debug(f"{self.env.now:.3f} Node {self.nodeid} GOSSIP rebroadcast {p.seq}")
                             self.do_rebroadcast(p)
 
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.GOSSIP08:
+                        # rebroadcast with a certain probability
+                        p_prob = 0.8
+                        if not self.is_client_mute and random.random() < p_prob:
+                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} GOSSIP rebroadcast {p.seq}")
+                            self.do_rebroadcast(p)
+
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.MANAGED_GOSSIP:
+                        if not self.is_client_mute:
+                            if self.timesReceived[p.seq] == 0:
+                                p_prob = 0.9
+                            elif self.timesReceived[p.seq] < 3:
+                                p_prob = 0.6
+                            else:
+                                p_prob = 0.3
+                            
+                            if random.random() < p_prob:
+                                logger.debug(f"{self.env.now:.3f} Node {self.nodeid} MANAGED GOSSIP rebroadcast {p.seq} (count={self.timesReceived[p.seq]})")
+                                self.do_rebroadcast(p)
+    
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.ADAPTIVE_GOSSIP:
+                        # rebroadcast with a probability that decreases as you receive more copies of the same message (including the original transmission, if you are a router/repeater). This is similar to Managed Gossip, but applied to all nodes and with a different probability function.
+                        if p.txNodeId not in self.neighbors:
+                            self.neighbors.add(p.txNodeId)
+                            # print(f"{self.env.now:.3f} Node {self.nodeid} adds {p.txNodeId} to neighbors (total neighbors: {len(self.neighbors)})")
+                        if not self.is_client_mute:
+                            if len(self.neighbors) < 5:
+                                base_p = 1.0
+                            elif len(self.neighbors) < 15:
+                                base_p = 0.9
+                            else:
+                                base_p = 0.8
+
+                            p_prob = max(0.2, base_p - 0.05 * self.timesReceived[p.seq])  # e.g., start at 1.0, decrease by 0.1 for each copy received, but never go below 0.1
+                            if random.random() < p_prob:
+                                logger.debug(f"{self.env.now:.3f} Node {self.nodeid} ADAPTIVE GOSSIP rebroadcast {p.seq} (count={self.timesReceived[p.seq]})")
+                                self.do_rebroadcast(p)
+
+
 
                     elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.COUNTER_BASED:
                         # rebroadcast if you received less than C copies of this message so far (including the original transmission, if you are a router/repeater)
                         C : int = 2
 
-                        if not self.is_client_mute and self.timesReceived < C:
-                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} COUNTER rebroadcast {p.seq} (count={self.timesReceived})")
+                        if not self.is_client_mute and self.timesReceived[p.seq] < C:
+                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} COUNTER rebroadcast {p.seq} (count={self.timesReceived[p.seq]})")
                             self.do_rebroadcast(p)
 
                     elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.RSSI_BASED:
@@ -489,7 +543,7 @@ class MeshNode:
 
                     elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.FLOODING_WITH_MEMORY:
                         # rebroadcast if you have not already received this message more than 2 times (including the original transmission, if you are a router/repeater). This is similar to Counter-Based, but with a higher threshold and applied to clients as well, since they can also help with rebroadcasting.
-                        if not self.is_client_mute and self.timesReceived == 1:
+                        if not self.is_client_mute and self.timesReceived[p.seq] == 1:
                             logger.debug(f"{self.env.now:.3f} Node {self.nodeid} MEMORY rebroadcast {p.seq}")
                             self.do_rebroadcast(p)
                 else:

@@ -35,13 +35,15 @@ SAVE = True
 
 # Add your router types here
 # This leaves room for new experimentation of different routing algorithms
-routerTypes = [conf.ROUTER_TYPE.MANAGED_FLOOD]
+routerTypes = [conf.ROUTER_TYPE.ADAPTIVE_GOSSIP,
+               conf.ROUTER_TYPE.MANAGED_FLOOD
+               ]
 
 # How many times should each combination run
-repetitions = 3
+repetitions = 30
 
 # How many nodes should be simulated in each test
-numberOfNodes = [3, 5, 10, 15, 30]
+numberOfNodes = [5, 15, 30, 50]
 
 
 ###########################################################
