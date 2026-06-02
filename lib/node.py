@@ -546,5 +546,31 @@ class MeshNode:
                         if not self.is_client_mute and self.timesReceived[p.seq] == 1:
                             logger.debug(f"{self.env.now:.3f} Node {self.nodeid} MEMORY rebroadcast {p.seq}")
                             self.do_rebroadcast(p)
+
+                    elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.SMART_GOSSIP:
+                        # Smooth formula: p = max(p_floor, rssi_factor * density_factor * dupe_factor)
+                        # rssi_factor   = sigmoid(alpha, rssi, rssi_ref)  — weak signal → high p (edge node needs relay)
+                        # density_factor = 1/(1+beta*n)                   — many neighbours → redundant → lower p
+                        # dupe_factor   = exp(-gamma*(dupes-1))            — repeated copies → already covered → lower p
+                        self.neighbors.add(p.txNodeId)
+                        if not self.is_client_mute:
+                            rssi = p.rssiAtN[self.nodeid]
+                            n = len(self.neighbors)
+                            dupes = self.timesReceived[p.seq]
+
+                            alpha   = self.conf.SMART_GOSSIP_ALPHA
+                            rssi_ref = self.conf.SMART_GOSSIP_RSSI_REF
+                            beta    = self.conf.SMART_GOSSIP_BETA
+                            gamma   = self.conf.SMART_GOSSIP_GAMMA
+                            p_floor = self.conf.SMART_GOSSIP_P_FLOOR
+
+                            rssi_factor    = 1.0 / (1.0 + math.exp(alpha * (rssi - rssi_ref)))
+                            density_factor = 1.0 / (1.0 + beta * n)
+                            dupe_factor    = math.exp(-gamma * (dupes - 1))
+
+                            p_prob = max(p_floor, rssi_factor * density_factor * dupe_factor)
+                            if random.random() < p_prob:
+                                logger.debug(f"{self.env.now:.3f} Node {self.nodeid} SMART GOSSIP rebroadcast {p.seq} (rssi={rssi:.1f}, n={n}, dupes={dupes}, p={p_prob:.3f})")
+                                self.do_rebroadcast(p)
                 else:
                     self.droppedByDelay += 1

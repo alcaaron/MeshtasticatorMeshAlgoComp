@@ -12,6 +12,7 @@ class Config:
         FLOODING_WITH_MEMORY = 'FLOODING_WITH_MEMORY'
         MANAGED_GOSSIP = 'MANAGED_GOSSIP'
         ADAPTIVE_GOSSIP = 'ADAPTIVE_GOSSIP'
+        SMART_GOSSIP = 'SMART_GOSSIP'
 
     def __init__(self, router_type=ROUTER_TYPE.MANAGED_FLOOD):
         self.MODEL = 5  # Path loss model to use (see README)
@@ -438,6 +439,20 @@ class Config:
                 self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.MANAGED_GOSSIP
             case self.ROUTER_TYPE.ADAPTIVE_GOSSIP.value:
                 self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.ADAPTIVE_GOSSIP
+            case self.ROUTER_TYPE.SMART_GOSSIP.value:
+                self.SELECTED_ROUTER_TYPE = self.ROUTER_TYPE.SMART_GOSSIP
+
+        # Smart gossip tunable parameters (also overridable from batchSim.py)
+        # alpha: RSSI sigmoid steepness (dBm^-1)
+        # rssi_ref: RSSI inflection point (dBm) — below this, probability rises toward 1
+        # beta: neighbor count penalty weight
+        # gamma: duplicate count penalty weight
+        # p_floor: minimum rebroadcast probability
+        self.SMART_GOSSIP_ALPHA = 0.145
+        self.SMART_GOSSIP_RSSI_REF = -103.8
+        self.SMART_GOSSIP_BETA = 0.146
+        self.SMART_GOSSIP_GAMMA = 0.311
+        self.SMART_GOSSIP_P_FLOOR = 0.111
 
         #####################################################
         ####### ASYMMETRIC LINK SIMULATION VARIABLES ########
