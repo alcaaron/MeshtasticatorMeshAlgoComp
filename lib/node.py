@@ -531,14 +531,25 @@ class MeshNode:
                             self.do_rebroadcast(p)
 
                     elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.RSSI_BASED:
-                        # rebroadcast if the signal strength of the received message is below a certain threshold (i.e., you are far away from the sender, so it needs more help to reach the destination)
-                        rssi_threshold = -90
+                                            # Probabilistic rebroadcast: the worse the RSSI, the higher the
+                                            # probability of rebroadcasting (weak signal => more help needed).
+                                            rssi_min = -120  # RSSI value at/below which P(rebroadcast) = max_prob
+                                            rssi_max = -60   # RSSI value at/above which P(rebroadcast) = min_prob
+                                            min_prob = 0.05  # floor probability even with great signal
+                                            max_prob = 1.0   # ceiling probability with very bad signal
 
-                        rssi = p.rssiAtN[self.nodeid]
+                                            rssi = p.rssiAtN[self.nodeid]
 
-                        if not self.is_client_mute and rssi < rssi_threshold:
-                            logger.debug(f"{self.env.now:.3f} Node {self.nodeid} RSSI rebroadcast {p.seq} (rssi={rssi})")
-                            self.do_rebroadcast(p)
+                                            # Clamp rssi into [rssi_min, rssi_max] then normalize to [0,1]
+                                            clamped = max(rssi_min, min(rssi, rssi_max))
+                                            normalized = (clamped - rssi_min) / (rssi_max - rssi_min)
+
+                                            # Invert so worse RSSI -> higher probability
+                                            rebroadcast_prob = max_prob - normalized * (max_prob - min_prob)
+
+                                            if not self.is_client_mute and random.random() < rebroadcast_prob:
+                                                logger.debug(f"{self.env.now:.3f} Node {self.nodeid} RSSI rebroadcast {p.seq} (rssi={rssi}, p={rebroadcast_prob:.2f})")
+                                                self.do_rebroadcast(p)
 
 
                     elif self.conf.SELECTED_ROUTER_TYPE == self.conf.ROUTER_TYPE.FLOODING_WITH_MEMORY:
